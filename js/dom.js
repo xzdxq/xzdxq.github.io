@@ -449,7 +449,7 @@ var domOperate = {
         var bjSum = 0;
         
         for (var i = 0; i < maxLen; i++) {
-            labels.push((i + 1)+" 期");
+            labels.push((i + 1));
             if (i < bxArr.length) {
                 bxSum += bxArr[i].yuelixi;
             }
@@ -519,6 +519,14 @@ var domOperate = {
                         mode: "index",
                         intersect: false,
                         callbacks: {
+                            // 修改标题回调，在浮层标题中显示期数
+                            title: function(context) {
+                                if (context && context.length > 0) {
+                                    var index = context[0].dataIndex;
+                                    return "第 " + (index + 1) + " 期";
+                                }
+                                return "";
+                            },
                             label: function (context) {
                                 var label = context.dataset.label || "";
                                 var value = context.parsed.y;
