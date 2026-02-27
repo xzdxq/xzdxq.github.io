@@ -23,6 +23,7 @@ var calcute = {
                             monthName: item.monthName,
                             yuelixi: item.yuelixi + gjjObj.monthdataArray[index].yuelixi,
                             yuebenjin: item.yuebenjin + gjjObj.monthdataArray[index].yuebenjin,
+                            leftBenjin: item.leftBenjin + gjjObj.monthdataArray[index].leftBenjin,
                             leftFund: item.leftFund + gjjObj.monthdataArray[index].leftFund
                         }
                     } else {
@@ -30,6 +31,7 @@ var calcute = {
                             monthName: item.monthName,
                             yuelixi: item.yuelixi,
                             yuebenjin: item.yuebenjin,
+                            leftBenjin: item.leftBenjin,
                             leftFund: item.leftFund
                         }
                     }
@@ -42,6 +44,7 @@ var calcute = {
                             monthName: item.monthName,
                             yuelixi: item.yuelixi + sdObj.monthdataArray[index].yuelixi,
                             yuebenjin: item.yuebenjin + sdObj.monthdataArray[index].yuebenjin,
+                            leftBenjin: item.leftBenjin + sdObj.monthdataArray[index].leftBenjin,
                             leftFund: item.leftFund + sdObj.monthdataArray[index].leftFund
                         }
                     } else {
@@ -49,6 +52,7 @@ var calcute = {
                             monthName: item.monthName,
                             yuelixi: item.yuelixi,
                             yuebenjin: item.yuebenjin,
+                            leftBenjin: item.leftBenjin,
                             leftFund: item.leftFund
                         }
                     }
@@ -73,6 +77,7 @@ var calcute = {
                             monthName: item.monthName,
                             yuelixi: item.yuelixi + gjjObj.monthdataArray[index].yuelixi,
                             yuebenjin: item.yuebenjin + gjjObj.monthdataArray[index].yuebenjin,
+                            leftBenjin: item.leftBenjin + gjjObj.monthdataArray[index].leftBenjin,
                             leftFund: item.leftFund + gjjObj.monthdataArray[index].leftFund
                         }
                     } else {
@@ -80,6 +85,7 @@ var calcute = {
                             monthName: item.monthName,
                             yuelixi: item.yuelixi,
                             yuebenjin: item.yuebenjin,
+                            leftBenjin: item.leftBenjin,
                             leftFund: item.leftFund
                         }
                     }
@@ -92,6 +98,7 @@ var calcute = {
                             monthName: item.monthName,
                             yuelixi: item.yuelixi + sdObj.monthdataArray[index].yuelixi,
                             yuebenjin: item.yuebenjin + sdObj.monthdataArray[index].yuebenjin,
+                            leftBenjin: item.leftBenjin + sdObj.monthdataArray[index].leftBenjin,
                             leftFund: item.leftFund + sdObj.monthdataArray[index].leftFund
                         }
                     } else {
@@ -99,6 +106,7 @@ var calcute = {
                             monthName: item.monthName,
                             yuelixi: item.yuelixi,
                             yuebenjin: item.yuebenjin,
+                            leftBenjin: item.leftBenjin,
                             leftFund: item.leftFund
                         }
                     }
@@ -134,6 +142,7 @@ var calcute = {
         var monthdataArray = [],
             nowmonth = new Date().getMonth(),
             realmonth = 0;
+        var paidBenjinSum = 0;
 
         for (var i = 1; i <= month; i++) {
             realmonth = nowmonth + i;
@@ -149,6 +158,11 @@ var calcute = {
             var yuelixi = dknum * monthlilv * (Math.pow((1 + monthlilv), month) - Math.pow((1 + monthlilv), i - 1)) / (Math.pow((1 + monthlilv), month) - 1);
             //每月应还本金=贷款本金×月利率×(1+月利率)^(还款月序号-1)÷〔(1+月利率)^还款月数-1〕
             var yuebenjin = dknum * monthlilv * Math.pow((1 + monthlilv), i - 1) / (Math.pow((1 + monthlilv), month) - 1);
+            paidBenjinSum += yuebenjin;
+            var leftBenjin = dknum - paidBenjinSum;
+            if (leftBenjin < 0) {
+                leftBenjin = 0;
+            }
             leftFund = leftFund - (yuelixi + yuebenjin);
             if (leftFund < 0) {
                 leftFund = 0
@@ -157,6 +171,8 @@ var calcute = {
                 monthName: realmonth + "月",
                 yuelixi: yuelixi,
                 yuebenjin: yuebenjin,
+                //剩余本金
+                leftBenjin: leftBenjin,
                 //剩余还款
                 leftFund: leftFund
             }
@@ -206,6 +222,10 @@ var calcute = {
             var yuebenjin = everymonthyh + (dknum - yhbenjin) * monthlilv;
             //每月应还利息=剩余本金×月利率=(贷款本金-已归还本金累计额)×月利率
             var yuelixi = (dknum - yhbenjin) * monthlilv;
+            var leftBenjin = dknum - everymonthyh * i;
+            if (leftBenjin < 0) {
+                leftBenjin = 0;
+            }
             leftFund = leftFund - yuebenjin;
             if (leftFund < 0) {
                 leftFund = 0
@@ -215,6 +235,8 @@ var calcute = {
                 yuelixi: yuelixi,
                 //每月本金
                 yuebenjin: everymonthyh,
+                //剩余本金
+                leftBenjin: leftBenjin,
                 //剩余还款
                 leftFund: leftFund
             }

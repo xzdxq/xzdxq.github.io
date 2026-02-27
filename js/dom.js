@@ -104,13 +104,13 @@ var domOperate = {
                 _this.resuleZh();
             }
         })
-        //历史返回初始化逻辑计算
+        //首页历史返回 / 上次记录初始化逻辑
         if ($("#infoDialog").length <= 0) {
             _this.historyBackinit();
         }
 
-        //贷款输入数字监听
-        $(".lannum").on("input", function (e) {
+        //贷款金额输入监听（不要绑定利率输入框）
+        $(".shangyef,.gjjf").on("input", function (e) {
             var enterkey = e.target.value,
                 stype = $(".current", ".cal_nav").data("name"),
                 type = "";
@@ -132,6 +132,11 @@ var domOperate = {
 
         })
 
+        // 首页“上次输入记录”按钮
+        $("#historyRecordBtn").on("click", function () {
+            _this.applyLastRecord();
+        });
+
         //详情滚动导航固定
         $("#infoDialog").scroll(_this.fixTop);
 
@@ -142,8 +147,6 @@ var domOperate = {
             $("#downloadExcelBtn").on("click", function () {
                 _this.downloadExcel();
             });
-            // 详情页：跳转提前还款模拟
-            $("#goPrepay").attr("href", "prepay.html" + window.location.search);
             // 提前还款按钮绑定（存在于提前还款页面）
             $("#prepayCalcBtn").on("click", function () {
                 var monthVal = $("#prepayMonthInput").val();
@@ -233,6 +236,17 @@ var domOperate = {
         var resobj = type == "1" ? benxiObj : benjinObj;
         _this.domOperates(type, resobj);
         _this.updateInterestChart(benxiObj, benjinObj);
+        // 保存上次记录
+        _this.saveLastRecord({
+            lanType: "1",
+            repayType: type,
+            sdnum: num,
+            gjjnum: "",
+            sdyear: year,
+            gjjyear: "",
+            sdRatePercent: $("#shangyeRateInput").val() || "",
+            gjjRatePercent: ""
+        });
 
     },
     gjjData: function (type, num) {
@@ -251,6 +265,17 @@ var domOperate = {
         var resobj = type == "1" ? benxiObj : benjinObj;
         _this.domOperates(type, resobj);
         _this.updateInterestChart(benxiObj, benjinObj);
+        // 保存上次记录
+        _this.saveLastRecord({
+            lanType: "2",
+            repayType: type,
+            sdnum: "",
+            gjjnum: num,
+            sdyear: "",
+            gjjyear: year,
+            sdRatePercent: "",
+            gjjRatePercent: $("#gjjRateInput").val() || ""
+        });
     },
     zuheData: function (type, sdnum, gjjnum) {
         sdnum = sdnum || $(".shangyef").val(), gjjnum = gjjnum || $(".gjjf").val();
@@ -270,6 +295,17 @@ var domOperate = {
         var resobj = type == "1" ? benxiObj : benjinObj;
         _this.domOperates(type, resobj);
         _this.updateInterestChart(benxiObj, benjinObj);
+        // 保存上次记录
+        _this.saveLastRecord({
+            lanType: "3",
+            repayType: type,
+            sdnum: sdnum,
+            gjjnum: gjjnum,
+            sdyear: sdyear,
+            gjjyear: gjjyear,
+            sdRatePercent: $("#shangyeRateInput").val() || "",
+            gjjRatePercent: $("#gjjRateInput").val() || ""
+        });
     },
     yearBind: function () { //年份绑定
         var yearArray = [];
@@ -318,11 +354,76 @@ var domOperate = {
             num.substring(num.length - (4 * i + 3));
         return (((sign) ? '' : '-') + num + '.' + cents);
     },
+    formatWan4: function (yuan) {
+        var n = parseFloat(yuan);
+        if (isNaN(n)) {
+            return "0.0000";
+        }
+        return (n / 10000).toFixed(4);
+    },
     getQueryString: function (name) {
         var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
         var r = window.location.search.substr(1).match(reg);
         if (r != null) return unescape(r[2]);
         return null;
+    },
+    saveLastRecord: function (data) {
+        try {
+            localStorage.setItem("loanLastRecord", JSON.stringify(data));
+        } catch (e) { }
+    },
+    getLastRecord: function () {
+        try {
+            var str = localStorage.getItem("loanLastRecord");
+            if (!str) return null;
+            return JSON.parse(str);
+        } catch (e) {
+            return null;
+        }
+    },
+    applyLastRecord: function () {
+        var _this = this;
+        var rec = _this.getLastRecord();
+        if (!rec) {
+            return;
+        }
+        // 贷款类型
+        $("#lanChange").val(rec.lanType);
+        $("#lanChange").trigger("change");
+        // 年限与金额、利率
+        if (rec.lanType == "1") {
+            $(".shangyef").val(rec.sdnum || "");
+            $("#sylanyear").val(rec.sdyear || "");
+            $("#shangyeRateInput").val(rec.sdRatePercent || "");
+        } else if (rec.lanType == "2") {
+            $(".gjjf").val(rec.gjjnum || "");
+            $("#gjjlanyear").val(rec.gjjyear || "");
+            $("#gjjRateInput").val(rec.gjjRatePercent || "");
+        } else if (rec.lanType == "3") {
+            $(".shangyef").val(rec.sdnum || "");
+            $(".gjjf").val(rec.gjjnum || "");
+            $("#sylanyear").val(rec.sdyear || "");
+            $("#gjjlanyear").val(rec.gjjyear || "");
+            $("#shangyeRateInput").val(rec.sdRatePercent || "");
+            $("#gjjRateInput").val(rec.gjjRatePercent || "");
+        }
+        // 还款方式 tab
+        if (rec.repayType == "1") {
+            $(".cal_changenav[data-name='benxi']").addClass("current");
+            $(".cal_changenav[data-name='benjin']").removeClass("current");
+        } else {
+            $(".cal_changenav[data-name='benjin']").addClass("current");
+            $(".cal_changenav[data-name='benxi']").removeClass("current");
+        }
+        // 重新计算
+        if (rec.lanType == "1") {
+            _this.shangdaiData(rec.repayType, rec.sdnum);
+        } else if (rec.lanType == "2") {
+            _this.gjjData(rec.repayType, rec.gjjnum);
+        } else if (rec.lanType == "3") {
+            _this.zuheData(rec.repayType, rec.sdnum, rec.gjjnum);
+        }
+        $(".cal_benxiinfo").show();
     },
     updateInterestChart: function (benxiData, benjinData) {
         // 仅在首页存在图表容器时绘制
@@ -452,7 +553,8 @@ var domOperate = {
                     '<div class="mouthtd flexli"><span>' + (index + 1) + '</span></div>' +
                     '<div class="mouthtd flexli"><span>' + _this.formatCurrency(item.yuebenjin) + '</span></div>' +
                     '<div class="mouthtd flexli"><span>' + _this.formatCurrency(item.yuelixi) + '</span></div>' +
-                    '<div class="mouthtd flexli"><span>' + _this.formatCurrency(item.leftFund) + '</span></div>' +
+                    '<div class="mouthtd flexli"><span>' + _this.formatWan4(item.leftBenjin) + '</span></div>' +
+                    '<div class="mouthtd flexli"><span>' + _this.formatWan4(item.leftFund) + '</span></div>' +
                     '</div>'
                 );
             });
@@ -515,16 +617,8 @@ var domOperate = {
         }
     },
     historyBackinit: function () { //历史返回初始化逻辑计算
-        var _this = this;
-        if ($("#lanChange").val() != "1") {
-            $("#lanChange").trigger("change")
-        }
-        if ($(".shangyef").val() != "") {
-            _this.inputChange($(".shangyef").val());
-        }
-        if ($(".gjjf").val() != "") {
-            _this.inputChange($(".gjjf").val());
-        }
+        // 优先使用本地存储的上次记录恢复计算结果
+        this.applyLastRecord();
     },
     // 提前还款（一次性结清）计算：基于当前计算结果
     prepayAll: function (monthIndex) {
@@ -569,13 +663,14 @@ var domOperate = {
         if (!list || list.length === 0) {
             return;
         }
-        var csv = '期次,每月本金(元),每月利息(元),剩余还款(元)\n';
+        var csv = '期次,每月本金(元),每月利息(元),剩余本金(元),剩余还款(元)\n';
         list.forEach(function (item, index) {
             var row = [
                 index + 1,
-                item.yuebenjin.toFixed(2),
-                item.yuelixi.toFixed(2),
-                item.leftFund.toFixed(2)
+                String(item.yuebenjin),
+                String(item.yuelixi),
+                String(item.leftBenjin),
+                String(item.leftFund)
             ];
             csv += row.join(',') + '\n';
         });
@@ -589,27 +684,7 @@ var domOperate = {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     },
-    inputChange: function (values) {
-        var _this = this,
-            enterkey = values,
-            stype = $(".current", ".cal_nav").data("name"),
-            type = "";
-        stype == "benxi" ? type = "1" : type = "2";
-        if ($(this).hasClass("gjjf")) {
-            // console.log("公积金逻辑")
-            _this.checkLanType(type, "", enterkey);
-
-        } else {
-            // console.log("商贷计算逻辑");
-            _this.checkLanType(type, enterkey, "");
-        }
-        //详情显示
-        if ($.trim(enterkey) != "" && !isNaN(enterkey) && enterkey > 0) {
-            $(".cal_benxiinfo").show();
-        } else {
-            $(".cal_benxiinfo").hide();
-        }
-    }
+    inputChange: function () { }
 
 
 
