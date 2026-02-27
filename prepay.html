@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" id="viewport" content="target-densitydpi=device-dpi,width=750,user-scalable=no">
+    <meta name="format-detection" content="telephone=no,email=no">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-touch-fullscreen" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta content="提前还款模拟" name="keywords" />
+    <meta content="提前还款模拟" itemprop="description" name="description" />
+    <title>提前还款模拟</title>
+    <link rel="stylesheet" href="css/common.css">
+</head>
+
+<body>
+    <div class="infoDialog" id="infoDialog">
+        <div class="infoinner">
+            <div class="infotop topjianbian">
+                <div class="cal_nav displayflex">
+                    <div class="cal_changenav inner_bx flexli current" data-name="benxi">等额本息</div>
+                    <div class="cal_changenav inner_bj flexli" data-name="benjin">等额本金</div>
+                </div>
+                <div class="infototal displayflex">
+                    <div class="infotli flexli">
+                        <div class="name">还款总额(万)</div>
+                        <div class="price" id="totalPrice">0.00</div>
+                    </div>
+                    <div class="infotli flexli">
+                        <div class="name">总利息(万)</div>
+                        <div class="price" id="totalLixi">0.00</div>
+                    </div>
+                    <div class="infotli flexli">
+                        <div class="name">贷款总额(万)</div>
+                        <div class="price" id="totalDknum">0.00</div>
+                    </div>
+                    <div class="infotli flexli">
+                        <div class="name">贷款期限</div>
+                        <div class="price" id="totalyear">20</div>
+                    </div>
+                </div>
+                <div class="prepay_section">
+                    <div class="prepay_title">提前还款模拟</div>
+                    <div class="prepay_form">
+                        <span>在第</span>
+                        <input type="tel" id="prepayMonthInput" class="prepay_input" placeholder="请输入期数" />
+                        <span>期一次性结清</span>
+                        <button id="prepayCalcBtn" class="prepay_btn">计算节省利息</button>
+                    </div>
+                    <div class="prepay_result" id="prepayResult"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="js/zepto.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/calculate.js"></script>
+    <script src="js/dom.js"></script>
+</body>
+
+</html>
+

@@ -76,10 +76,10 @@
             <div class="cal_li gjj_hook">
                 <div class="cal_leftname">公积金利率</div>
                 <div class="cal_rightselect">
-                    <select id="gjjlanlilv" class="lanchange lilvchange">
-                        <option value="0.0325">基准利率</option>
-                    </select>
-                    <div class="rightrow"></div>
+                    <input type="tel" id="gjjRateInput" placeholder="请输入年利率" maxlength="5"
+                        onkeyup="if(isNaN(value))execCommand('undo')" onafterpaste="if(isNaN(value))execCommand('undo')"
+                        class="lannum rateinput" />
+                    <span>%</span>
                 </div>
             </div>
             <div class="cal_li border_bottom  shangdai_hook sdfund">
@@ -102,14 +102,18 @@
             <div class="cal_li shangdai_hook">
                 <div class="cal_leftname">商贷利率</div>
                 <div class="cal_rightselect">
-                    <select id="shangyelanlilv" class="lanchange lilvchange">
-                        <option value="0.049">基准利率</option>
-                    </select>
-                    <div class="rightrow"></div>
+                    <input type="tel" id="shangyeRateInput" placeholder="请输入年利率" maxlength="5"
+                        onkeyup="if(isNaN(value))execCommand('undo')" onafterpaste="if(isNaN(value))execCommand('undo')"
+                        class="lannum rateinput" />
+                    <span>%</span>
                 </div>
             </div>
 
 
+        </div>
+
+        <div class="chart_container">
+            <canvas id="interestChart"></canvas>
         </div>
 
         <div class="tips">以上为央行公布的贷款基准利率，结果仅供参考</div>
@@ -117,6 +121,7 @@
     </div>
 
     <script src="js/zepto.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="js/config.js"></script>
     <script src="js/calculate.js"></script>
     <script src="js/dom.js"></script>

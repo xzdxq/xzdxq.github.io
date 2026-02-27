@@ -40,7 +40,7 @@ input,button,a{-webkit-tap-highlight-color: rgba(0,0,0,0); -webkit-tap-highlight
 .cal_form{margin-top:20px;background: #fff;padding:0 32px;}
 .cal_form .cal_li{height:90px;}
 .cal_form .cal_li .cal_leftname{line-height:86px;color:#333;font-size: 30px;float:left;}
-.cal_form .cal_li .cal_rightselect{line-height:86px;color:#666;font-size: 26px;float:right;}
+.cal_form .cal_li .cal_rightselect {line-height:86px;color:#666;font-size: 26px;float:right;}
 .cal_form .cal_li .cal_rightselect .lanchange{line-height:84px;color:#666;font-size: 26px;border:0; height:84px;background: transparent;text-align: right;direction: rtl;}
 .cal_form .cal_li .cal_rightselect .lanchange option { direction: rtl;text-align: right;}
 .lanchange,.rightrow,.cal_rightselect input,.cal_rightselect span{display: inline-block;vertical-align: middle;}
@@ -51,6 +51,7 @@ input,button,a{-webkit-tap-highlight-color: rgba(0,0,0,0); -webkit-tap-highlight
 .gjj_hook{display: none;}
 .cal_dijian,.cal_dijianprice{text-indent: 40px;}
 
+
 .infoDialog{position: absolute;top:0;right:0;left:0;bottom: 0;z-index: 500;overflow-y: scroll; background: #fff;}
 .infoinner{width:750px;margin:0 auto;position: relative;}
 .infoinner .infotop{width:750px;height:218px;position: relative;}
@@ -58,17 +59,16 @@ input,button,a{-webkit-tap-highlight-color: rgba(0,0,0,0); -webkit-tap-highlight
 .infoinner .infotop .infototal .infotli{width:25%;text-align: center;color:#fff;}
 .infoinner .infotop .infototal .infotli .name{font-size:22px;}
 .infoinner .infotop .infototal .infotli .price{font-size:30px;width:100%;overflow: hidden;white-space: nowrap;text-overflow: ellipsis;margin-top:10px;}
-.tablenav{border-bottom:2px solid #F5F5F5;background-color: #fff;box-shadow: 0 7px 7px rgba(0,0,0,0.1);}
+.tablenav{border-bottom:2px solid #F5F5F5;background-color: #fff;box-shadow: 0 7px 7px rgba(0,0,0,0.1);width:750px;margin:0 auto;}
 .tablenavinner{padding:0 10px;height:70px;}
 .tablenavinner .fixtitle{line-height: 70px;text-align: center;font-size: 26px;color:#333;}
 
-.oneyear .yeartitle{background: #F5F5F5;height:50px;line-height: 50px;font-size: 26px;color:#666;text-indent: 70px;}
-.oneyear .mounths{color:#333;font-size:26px;padding: 0 10px;}
-.oneyear .mounths .mouthli{height: 88px;}
-.oneyear .mounths .mouthli::after{left:22px;}
-.oneyear .mounths .mouthli .mouthtd{display: table;width:25%;height:88px;}
-.oneyear .mounths .mouthli .mouthtd span{display: table-cell;vertical-align: middle;text-align: center;width: 100%;height:100%;word-break: break-all;}
-.topfixedpc {position: fixed;width: 100%;left: 0;top: 0;z-index: 1000;}
+.mouths{color:#333;font-size:26px;padding: 0 10px;}
+.mouths .mouthli{height: 88px;}
+.mouths .mouthli::after{left:22px;}
+.mouths .mouthli .mouthtd{display: table;width:25%;height:88px;}
+.mouths .mouthli .mouthtd span{display: table-cell;vertical-align: middle;text-align: center;width: 100%;height:100%;word-break: break-all;}
+.topfixedpc {position: fixed;width:750px;left:50%;top: 0;z-index: 1000;transform: translateX(-50%);}
 
 
 

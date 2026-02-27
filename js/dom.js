@@ -4,16 +4,8 @@ var domOperate = {
     init: function () {
         var _this = this;
         _this.yearBind();
-        //初始化计算
-        var sdYear = $("#sylanyear").val() || "20",
-            gjjYear = $("#gjjlanyear").val() || "20";
-        _this.lilvCal(sdYear, config.shangdaiLilv, config.shangdaiSelect, "shangyelanlilv");
-        _this.lilvCal(gjjYear, config.gjjLilv, config.gjjSelect, "gjjlanlilv");
-
-        //商贷年利率变化计算
+        //商贷年限变化
         $("#sylanyear").change(function () {
-            var year = $(this).val();
-            _this.lilvCal(year, config.shangdaiLilv, config.shangdaiSelect, "shangyelanlilv");
             var selectvalue = $("#lanChange").val();
             if (selectvalue == "1") {
                 _this.resultSd();
@@ -22,10 +14,8 @@ var domOperate = {
                 _this.resuleZh();
             }
         })
-        //公积金年利率变化计算
+        //公积金年限变化
         $("#gjjlanyear").change(function () {
-            var year = $(this).val();
-            _this.lilvCal(year, config.gjjLilv, config.gjjSelect, "gjjlanlilv");
             var selectvalue = $("#lanChange").val();
             if (selectvalue == "2") {
                 _this.resultGjj();
@@ -35,9 +25,8 @@ var domOperate = {
             }
 
         })
-
-        //商贷利率切换变化
-        $("#shangyelanlilv").change(function () {
+        //商贷利率输入变化
+        $("#shangyeRateInput").on("input", function () {
             var selectvalue = $("#lanChange").val();
             if (selectvalue == "1") {
                 _this.resultSd();
@@ -46,8 +35,8 @@ var domOperate = {
                 _this.resuleZh();
             }
         })
-        //公积金利率切换变化
-        $("#gjjlanlilv").change(function () {
+        //公积金利率输入变化
+        $("#gjjRateInput").on("input", function () {
             var selectvalue = $("#lanChange").val();
             if (selectvalue == "2") {
                 _this.resultGjj();
@@ -149,6 +138,24 @@ var domOperate = {
         //详情页面数据绑定
         if ($("#infoDialog").length > 0) {
             _this.resultBind();
+            // 详情页：下载Excel
+            $("#downloadExcelBtn").on("click", function () {
+                _this.downloadExcel();
+            });
+            // 详情页：跳转提前还款模拟
+            $("#goPrepay").attr("href", "prepay.html" + window.location.search);
+            // 提前还款按钮绑定（存在于提前还款页面）
+            $("#prepayCalcBtn").on("click", function () {
+                var monthVal = $("#prepayMonthInput").val();
+                var res = _this.prepayAll(monthVal);
+                if (!res) {
+                    $("#prepayResult").html("请输入有效的期数。");
+                    return;
+                }
+                var newTotalLixiWan = _this.formatCurrency(res.newTotalLixi / 10000);
+                var saveLixiWan = _this.formatCurrency(res.saveLixi / 10000);
+                $("#prepayResult").html('在第' + res.month + '期后一次性结清，总利息约为' + newTotalLixiWan + '万，较原计划节省利息约' + saveLixiWan + '万。');
+            });
         }
 
 
@@ -199,44 +206,70 @@ var domOperate = {
             _this.zuheData(type, sdnum, gjjnum);
         }
     },
+    getRateValue: function (selector) {
+        var val = $.trim($(selector).val());
+        if (val === "") {
+            return null;
+        }
+        var num = parseFloat(val);
+        if (isNaN(num) || num <= 0) {
+            return null;
+        }
+        return num / 100; // 转换为小数利率
+    },
     shangdaiData: function (type, num) {
         num = num || $(".shangyef").val();
         var _this = this;
         var year = $("#sylanyear").val();
-        var lilv = $("#shangyelanlilv").val();
+        var lilv = _this.getRateValue("#shangyeRateInput");
+        if (!num || isNaN(num) || num <= 0 || lilv == null) {
+            return;
+        }
         //结果地址传参数
         _this.navigateUrl(type, "1", num, "", year, "", lilv, "");
-        //调用商贷计算公式
-        var resobj = calcute.singleDk(type, num, year, lilv);
-        // console.log(resobj);
+        //调用商贷计算公式（本息、本金同时计算用于对比图表）
+        var benxiObj = calcute.singleDk("1", num, year, lilv);
+        var benjinObj = calcute.singleDk("2", num, year, lilv);
+        var resobj = type == "1" ? benxiObj : benjinObj;
         _this.domOperates(type, resobj);
+        _this.updateInterestChart(benxiObj, benjinObj);
 
     },
     gjjData: function (type, num) {
         num = num || $(".gjjf").val();
         var _this = this;
         var year = $("#gjjlanyear").val();
-        var lilv = $("#gjjlanlilv").val();
+        var lilv = _this.getRateValue("#gjjRateInput");
+        if (!num || isNaN(num) || num <= 0 || lilv == null) {
+            return;
+        }
         //结果地址传参数
         _this.navigateUrl(type, "2", "", num, "", year, "", lilv);
-        //调用公积金计算公式
-        var resobj = calcute.singleDk(type, num, year, lilv);
-        //console.log(resobj);
+        //调用公积金计算公式（本息、本金同时计算用于对比图表）
+        var benxiObj = calcute.singleDk("1", num, year, lilv);
+        var benjinObj = calcute.singleDk("2", num, year, lilv);
+        var resobj = type == "1" ? benxiObj : benjinObj;
         _this.domOperates(type, resobj);
+        _this.updateInterestChart(benxiObj, benjinObj);
     },
     zuheData: function (type, sdnum, gjjnum) {
         sdnum = sdnum || $(".shangyef").val(), gjjnum = gjjnum || $(".gjjf").val();
         var _this = this;
         var sdyear = $("#sylanyear").val(),
-            sdlilv = $("#shangyelanlilv").val();
+            sdlilv = _this.getRateValue("#shangyeRateInput");
         var gjjyear = $("#gjjlanyear").val(),
-            gjjlilv = $("#gjjlanlilv").val();
+            gjjlilv = _this.getRateValue("#gjjRateInput");
+        if (!sdnum || isNaN(sdnum) || sdnum <= 0 || !gjjnum || isNaN(gjjnum) || gjjnum <= 0 || sdlilv == null || gjjlilv == null) {
+            return;
+        }
         //结果地址传参数
         _this.navigateUrl(type, "3", sdnum, gjjnum, sdyear, gjjyear, sdlilv, gjjlilv);
-        //调用组合贷款计算公式
-        var resobj = calcute.zuhe(type, sdnum, gjjnum, sdyear, gjjyear, sdlilv, gjjlilv);
-        //console.log(resobj);
+        //调用组合贷款计算公式（本息、本金同时计算用于对比图表）
+        var benxiObj = calcute.zuhe("1", sdnum, gjjnum, sdyear, gjjyear, sdlilv, gjjlilv);
+        var benjinObj = calcute.zuhe("2", sdnum, gjjnum, sdyear, gjjyear, sdlilv, gjjlilv);
+        var resobj = type == "1" ? benxiObj : benjinObj;
         _this.domOperates(type, resobj);
+        _this.updateInterestChart(benxiObj, benjinObj);
     },
     yearBind: function () { //年份绑定
         var yearArray = [];
@@ -291,13 +324,107 @@ var domOperate = {
         if (r != null) return unescape(r[2]);
         return null;
     },
+    updateInterestChart: function (benxiData, benjinData) {
+        // 仅在首页存在图表容器时绘制
+        if (typeof Chart === "undefined") {
+            return;
+        }
+        var canvas = document.getElementById("interestChart");
+        if (!canvas) {
+            return;
+        }
+        var ctx = canvas.getContext("2d");
+        var bxArr = benxiData.monthdataArray || [];
+        var bjArr = benjinData.monthdataArray || [];
+        var maxLen = Math.max(bxArr.length, bjArr.length);
+        if (maxLen === 0) {
+            return;
+        }
+        var labels = [];
+        var bxData = [];
+        var bjData = [];
+        var bxSum = 0;
+        var bjSum = 0;
+        for (var i = 0; i < maxLen; i++) {
+            labels.push(i + 1);
+            if (i < bxArr.length) {
+                bxSum += bxArr[i].yuelixi;
+            }
+            if (i < bjArr.length) {
+                bjSum += bjArr[i].yuelixi;
+            }
+            // 转换为万元显示
+            bxData.push(bxSum / 10000);
+            bjData.push(bjSum / 10000);
+        }
+        if (this.interestChart) {
+            this.interestChart.destroy();
+        }
+        this.interestChart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: labels,
+                datasets: [{
+                        label: "等额本息累计利息(万)",
+                        data: bxData,
+                        borderColor: "#ff6b6b",
+                        backgroundColor: "rgba(255,107,107,0.1)",
+                        tension: 0.1,
+                        borderWidth: 2,
+                        pointRadius: 0
+                    },
+                    {
+                        label: "等额本金累计利息(万)",
+                        data: bjData,
+                        borderColor: "#4b7bec",
+                        backgroundColor: "rgba(75,123,236,0.1)",
+                        tension: 0.1,
+                        borderWidth: 2,
+                        pointRadius: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true
+                    },
+                    tooltip: {
+                        mode: "index",
+                        intersect: false
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: "期数（月）"
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: "累计利息(万)"
+                        }
+                    }
+                }
+            }
+        });
+    },
     domOperates: function (type, data) {
         var _this = this;
+        // 保存当前计算结果，便于提前还款等后续计算使用
+        _this.currentResult = {
+            type: type,
+            data: data
+        };
         var yuegong = _this.formatCurrency(data.yuegong);
         var totalPrice = _this.formatCurrency(data.totalPrice / 10000); //万元转换
         var totalLixi = _this.formatCurrency(data.totalLixi / 10000); //万元转换
         var totalDknum = _this.formatCurrency(data.totalDknum);
-        var mouthdataArray = data.mouthdataArray;
+        var monthdataArray = data.monthdataArray;
         $(".cal_price_hook").html(yuegong);
         $(".htotalnum").html(totalPrice + "万");
         $(".htotallixinum").html(totalLixi + "万");
@@ -317,29 +444,19 @@ var domOperate = {
             $("#totalLixi").html(totalLixi);
             $("#totalDknum").html(totalDknum);
             $("#totalyear").html(data.year);
-            //详情页面循环
-            var yeartitle = '<div class="yeartitle">第一年</div>',
-                yearHtmlArray = [],
-                yeartitleHtml = "",
-                mouthliArray = [],
-                yearflag = 1;
-            mouthdataArray.forEach(function (item, index) {
-                var pushnum = parseInt(item.monthName);
-
-                mouthliArray[index] = '<div class="mouthli displayflex border_bottom">' +
-                    '<div class="mouthtd flexli"><span>' + item.monthName + '</span></div>' +
+            // 详情页面循环：按期次平铺
+            var rowsHtml = [];
+            monthdataArray.forEach(function (item, index) {
+                rowsHtml.push(
+                    '<div class="mouthli displayflex border_bottom">' +
+                    '<div class="mouthtd flexli"><span>' + (index + 1) + '</span></div>' +
                     '<div class="mouthtd flexli"><span>' + _this.formatCurrency(item.yuebenjin) + '</span></div>' +
-                    '<div class="mouthtd flexli"> <span>' + _this.formatCurrency(item.yuelixi) + '</span></div>' +
-                    '<div class="mouthtd flexli"><span>' + _this.formatCurrency(item.leftFund) + '</span> </div></div>';
-                if (pushnum == 12) {
-                    yeartitleHtml = yeartitle.replace("一", yearflag);
-                    yearflag++;
-                    yearHtmlArray.push('<div class="oneyear">' + yeartitleHtml + '<div class="mounths">' + mouthliArray.join("") + '</div></div>');
-                    mouthliArray = [];
-                }
-            })
-            yeartitleHtml = yeartitle.replace("一", yearflag);
-            $("#yearouter").html(yearHtmlArray.join("") + '<div class="oneyear">' + yeartitleHtml + '<div class="mounths">' + mouthliArray.join("") + '</div></div>');
+                    '<div class="mouthtd flexli"><span>' + _this.formatCurrency(item.yuelixi) + '</span></div>' +
+                    '<div class="mouthtd flexli"><span>' + _this.formatCurrency(item.leftFund) + '</span></div>' +
+                    '</div>'
+                );
+            });
+            $("#yearouter").html('<div class="mouths">' + rowsHtml.join("") + '</div>');
 
         }
 
@@ -408,6 +525,69 @@ var domOperate = {
         if ($(".gjjf").val() != "") {
             _this.inputChange($(".gjjf").val());
         }
+    },
+    // 提前还款（一次性结清）计算：基于当前计算结果
+    prepayAll: function (monthIndex) {
+        var result = this.currentResult;
+        if (!result || !result.data || !result.data.monthdataArray) {
+            return null;
+        }
+        var data = result.data;
+        var monthArray = data.monthdataArray;
+        var m = parseInt(monthIndex, 10);
+        if (isNaN(m) || m <= 0) {
+            return null;
+        }
+        if (m > monthArray.length) {
+            m = monthArray.length;
+        }
+        var paidLixi = 0;
+        var paidBenjin = 0;
+        for (var i = 0; i < m; i++) {
+            paidLixi += monthArray[i].yuelixi;
+            paidBenjin += monthArray[i].yuebenjin;
+        }
+        var dknum = parseFloat(data.totalDknum) * 10000;
+        var newTotalLixi = paidLixi;
+        var newTotalPrice = dknum + newTotalLixi;
+        var saveLixi = data.totalLixi - newTotalLixi;
+        return {
+            month: m,
+            newTotalLixi: newTotalLixi,
+            newTotalPrice: newTotalPrice,
+            saveLixi: saveLixi
+        };
+    },
+    // 下载还款明细为 Excel（CSV）
+    downloadExcel: function () {
+        var result = this.currentResult;
+        if (!result || !result.data || !result.data.monthdataArray) {
+            return;
+        }
+        var data = result.data;
+        var list = data.monthdataArray;
+        if (!list || list.length === 0) {
+            return;
+        }
+        var csv = '期次,每月本金(元),每月利息(元),剩余还款(元)\n';
+        list.forEach(function (item, index) {
+            var row = [
+                index + 1,
+                item.yuebenjin.toFixed(2),
+                item.yuelixi.toFixed(2),
+                item.leftFund.toFixed(2)
+            ];
+            csv += row.join(',') + '\n';
+        });
+        var blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = '还款明细.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     },
     inputChange: function (values) {
         var _this = this,

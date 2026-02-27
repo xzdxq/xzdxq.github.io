@@ -77,7 +77,7 @@ var config = {
         },
         {
             year: 20,
-            select: true
+            select: false
         },
         {
             year: 21,
@@ -117,7 +117,7 @@ var config = {
         },
         {
             year: 30,
-            select: false
+            select: true
         }
     ],
     shangdaiLilv: [{
