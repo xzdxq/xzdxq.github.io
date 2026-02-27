@@ -449,7 +449,7 @@ var domOperate = {
         var bjSum = 0;
         
         for (var i = 0; i < maxLen; i++) {
-            labels.push(i + 1);
+            labels.push((i + 1)+" 期");
             if (i < bxArr.length) {
                 bxSum += bxArr[i].yuelixi;
             }
@@ -474,7 +474,7 @@ var domOperate = {
             data: {
                 labels: labels,
                 datasets: [{
-                        label: "等额本息累计利息(万)",
+                        label: "等额本息累计利息",
                         data: bxData,
                         borderColor: "#ff6b6b",
                         backgroundColor: "rgba(255,107,107,0.1)",
@@ -483,7 +483,7 @@ var domOperate = {
                         pointRadius: 0
                     },
                     {
-                        label: "等额本金累计利息(万)",
+                        label: "等额本金累计利息",
                         data: bjData,
                         borderColor: "#4b7bec",
                         backgroundColor: "rgba(75,123,236,0.1)",
@@ -492,7 +492,7 @@ var domOperate = {
                         pointRadius: 0
                     },
                     {
-                        label: "差值(本息-本金)(万)",
+                        label: "差值(本息-本金)",
                         data: diffData,
                         borderColor: "#00b894",
                         backgroundColor: "rgba(0,184,148,0.1)",
