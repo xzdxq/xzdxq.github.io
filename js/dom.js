@@ -444,8 +444,10 @@ var domOperate = {
         var labels = [];
         var bxData = [];
         var bjData = [];
+        var diffData = []; // 差值数据数组
         var bxSum = 0;
         var bjSum = 0;
+        
         for (var i = 0; i < maxLen; i++) {
             labels.push(i + 1);
             if (i < bxArr.length) {
@@ -455,12 +457,18 @@ var domOperate = {
                 bjSum += bjArr[i].yuelixi;
             }
             // 转换为万元显示
-            bxData.push(bxSum / 10000);
-            bjData.push(bjSum / 10000);
+            var bxVal = bxSum / 10000;
+            var bjVal = bjSum / 10000;
+            bxData.push(bxVal);
+            bjData.push(bjVal);
+            // 计算差值（本息-本金）
+            diffData.push(bxVal - bjVal);
         }
+        
         if (this.interestChart) {
             this.interestChart.destroy();
         }
+        var _this = this;
         this.interestChart = new Chart(ctx, {
             type: "line",
             data: {
@@ -482,6 +490,16 @@ var domOperate = {
                         tension: 0.1,
                         borderWidth: 2,
                         pointRadius: 0
+                    },
+                    {
+                        label: "差值(本息-本金)(万)",
+                        data: diffData,
+                        borderColor: "#00b894",
+                        backgroundColor: "rgba(0,184,148,0.1)",
+                        borderDash: [5, 5], // 虚线样式，更清晰地区分差值曲线
+                        tension: 0.1,
+                        borderWidth: 2,
+                        pointRadius: 0
                     }
                 ]
             },
@@ -490,11 +508,23 @@ var domOperate = {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        display: true
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true, // 使用点样式代替矩形
+                            boxWidth: 10
+                        }
                     },
                     tooltip: {
                         mode: "index",
-                        intersect: false
+                        intersect: false,
+                        callbacks: {
+                            label: function (context) {
+                                var label = context.dataset.label || "";
+                                var value = context.parsed.y;
+                                return label + ": " + value.toFixed(4) + "万";
+                            }
+                        }
                     }
                 },
                 scales: {
@@ -507,7 +537,22 @@ var domOperate = {
                     y: {
                         title: {
                             display: true,
-                            text: "累计利息(万)"
+                            text: "金额(万)"
+                        },
+                        grid: {
+                            color: function(context) {
+                                // 可以让y=0的网格线更突出
+                                if (context.tick.value === 0) {
+                                    return '#999';
+                                }
+                                return '#e0e0e0';
+                            },
+                            lineWidth: function(context) {
+                                if (context.tick.value === 0) {
+                                    return 2;
+                                }
+                                return 1;
+                            }
                         }
                     }
                 }

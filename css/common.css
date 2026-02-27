@@ -47,6 +47,15 @@ input,button,a{-webkit-tap-highlight-color: rgba(0,0,0,0); -webkit-tap-highlight
 .cal_form .cal_li .cal_rightselect .rightrow{width:15px;height:15px;border-top: 2px solid rgba(82,82,82,1);border-right: 2px solid rgba(82,82,82,1);transform: rotate(45deg);-webkit-transform: rotate(45deg);}
 .cal_form .cal_li .cal_rightselect .lannum{width:150px;height:80px;line-height: 80px;border:0;text-align: right;font-size: 26px;color:#666;}
 .calWrap .tips{color:#999;font-size:22px;margin-top:14px;padding-left:31px;}
+.chart_container{
+    width:750px;
+    margin:10px auto 20px;
+    height:380px;
+}
+#interestChart{
+    width:100% !important;
+    height:100% !important;
+}
 .gjj_hook{display: none;}
 .cal_dijian,.cal_dijianprice{text-indent: 40px;}
 
