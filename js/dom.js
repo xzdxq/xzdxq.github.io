@@ -799,13 +799,15 @@ var domOperate = {
         }
         
         var labels = [];
-        var interestDiffData = []; // 差值(本息-本金) 利息差值
-        var principalDiffOnly = [];   // 等额本金已还本金-等额本息已还本金的差值
-        var combinedDiffData = []; // 两条曲线的和
+        var amountMinusPrincipalDiff = []; // 已还金额差值-已还本金差值的绝对值
+        var interestDiffData = [];         // 已还利息差值的绝对值
+        var combinedDiffData = [];         // 两条曲线和的绝对值
+        var bxPrincipalSum = 0;
+        var bjPrincipalSum = 0;
         var bxInterestSum = 0;
         var bjInterestSum = 0;
-        var bjPrincipalSum = 0;
-        var bxPrincipalSum = 0;
+        var bxTotalSum = 0;
+        var bjTotalSum = 0;
         
         // 如果没有传入principalDiffData，则重新计算本金差值
         var calculatedPrincipalDiff = [];
@@ -823,33 +825,43 @@ var domOperate = {
             principalDiffData = calculatedPrincipalDiff;
         }
         
-        // 重新计算各差值
-        bxInterestSum = 0;
-        bjInterestSum = 0;
+        // 重新计算各差值并取绝对值
         bxPrincipalSum = 0;
         bjPrincipalSum = 0;
+        bxInterestSum = 0;
+        bjInterestSum = 0;
+        bxTotalSum = 0;
+        bjTotalSum = 0;
         
         for (var i = 0; i < maxLen; i++) {
             labels.push(i + 1);
             if (i < bxArr.length) {
                 bxPrincipalSum += bxArr[i].yuebenjin;
                 bxInterestSum += bxArr[i].yuelixi;
+                bxTotalSum = bxPrincipalSum + bxInterestSum;
             }
             if (i < bjArr.length) {
                 bjPrincipalSum += bjArr[i].yuebenjin;
                 bjInterestSum += bjArr[i].yuelixi;
+                bjTotalSum = bjPrincipalSum + bjInterestSum;
             }
             
-            // 差值(本息-本金) 利息差值：等额本息利息 - 等额本金利息
-            var interestDiff = (bxInterestSum - bjInterestSum) / 10000;
+            // 已还金额差值：等额本金已还金额 - 等额本息已还金额
+            var totalAmountDiff = (bjTotalSum - bxTotalSum) / 10000;
+            
+            // 已还本金差值：等额本金已还本金 - 等额本息已还本金
+            var principalDiff = i < principalDiffData.length ? principalDiffData[i] : 0;
+            
+            // 第一条曲线：已还金额差值 - 已还本金差值，取绝对值
+            var amountMinusPrincipal = Math.abs(totalAmountDiff - principalDiff);
+            amountMinusPrincipalDiff.push(amountMinusPrincipal);
+            
+            // 第二条曲线：已还利息差值，取绝对值
+            var interestDiff = Math.abs(bjInterestSum - bxInterestSum) / 10000;
             interestDiffData.push(interestDiff);
             
-            // 等额本金已还本金-等额本息已还本金的差值
-            var principalDiff = i < principalDiffData.length ? principalDiffData[i] : 0;
-            principalDiffOnly.push(principalDiff);
-            
-            // 两条曲线的和
-            combinedDiffData.push(interestDiff + principalDiff);
+            // 第三条曲线：两条曲线的和，取绝对值
+            combinedDiffData.push(Math.abs(amountMinusPrincipal + interestDiff));
         }
         
         if (this.differenceChart) {
@@ -861,27 +873,27 @@ var domOperate = {
             data: {
                 labels: labels,
                 datasets: [{
-                    label: "差值总和",
-                    data: combinedDiffData,
-                    borderColor: "#20bf6b",
-                    backgroundColor: "rgba(32,191,107,0.1)",
-                    borderDash: [8, 4],
+                    label: "a=|已还金额差值-已还本金差值|",
+                    data: amountMinusPrincipalDiff,
+                    borderColor: "#ff6b6b",
+                    backgroundColor: "rgba(255,107,107,0.1)",
                     tension: 0.1,
                     borderWidth: 2,
                     pointRadius: 0
                 }, {
-                    label: "已还本金差值(等额本金-等额本息)",
-                    data: principalDiffOnly,
+                    label: "b=|已还利息差值|",
+                    data: interestDiffData,
                     borderColor: "#4b7bec",
                     backgroundColor: "rgba(75,123,236,0.1)",
                     tension: 0.1,
                     borderWidth: 2,
                     pointRadius: 0
                 }, {
-                    label: "已还利息差值(等额本息-等额本金)",
-                    data: interestDiffData,
-                    borderColor: "#ff6b6b",
-                    backgroundColor: "rgba(255,107,107,0.1)",
+                    label: "|差值总和(a+b)|",
+                    data: combinedDiffData,
+                    borderColor: "#20bf6b",
+                    backgroundColor: "rgba(32,191,107,0.1)",
+                    borderDash: [8, 4],
                     tension: 0.1,
                     borderWidth: 2,
                     pointRadius: 0
@@ -928,7 +940,7 @@ var domOperate = {
                     y: {
                         title: {
                             display: true,
-                            text: "差值(万)"
+                            text: "差值绝对值(万)"
                         },
                         beginAtZero: true,  // Y轴从0开始
                         grid: {
