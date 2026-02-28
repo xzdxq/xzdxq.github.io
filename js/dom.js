@@ -574,6 +574,12 @@ var domOperate = {
             }
         });
 
+        // 渲染已还金额图表（新）
+        _this.renderTotalAmountChart(benxiData, benjinData);
+
+        // 渲染已还利息图表
+        _this.renderInterestChart(benxiData, benjinData);
+
         // 渲染已还本金图表
         _this.renderPrincipalChart(benxiData, benjinData);
     },
@@ -600,25 +606,38 @@ var domOperate = {
         var bjPrincipalData = [];
         var bxInterestData = [];
         var bjInterestData = [];
+        var principalDiffData = []; // 等额本金已还本金-等额本息已还本金的差值
+        var totalAmountDiffData = []; // 等额本金已还金额-等额本息已还金额的差值（本金+利息）
         var bxPrincipalSum = 0;
         var bjPrincipalSum = 0;
         var bxInterestSum = 0;
         var bjInterestSum = 0;
+        var bxTotalSum = 0;
+        var bjTotalSum = 0;
         
         for (var i = 0; i < maxLen; i++) {
             labels.push(i + 1);
             if (i < bxArr.length) {
                 bxPrincipalSum += bxArr[i].yuebenjin;
                 bxInterestSum += bxArr[i].yuelixi;
+                bxTotalSum = bxPrincipalSum + bxInterestSum;
                 bxPrincipalData.push(bxPrincipalSum / 10000); // 转换为万元
                 bxInterestData.push(bxInterestSum / 10000);   // 转换为万元
             }
             if (i < bjArr.length) {
                 bjPrincipalSum += bjArr[i].yuebenjin;
                 bjInterestSum += bjArr[i].yuelixi;
+                bjTotalSum = bjPrincipalSum + bjInterestSum;
                 bjPrincipalData.push(bjPrincipalSum / 10000); // 转换为万元
                 bjInterestData.push(bjInterestSum / 10000);   // 转换为万元
             }
+            // 计算本金差值：等额本金已还本金 - 等额本息已还本金
+            var principalDiff = (bjPrincipalSum - bxPrincipalSum) / 10000;
+            principalDiffData.push(principalDiff);
+            
+            // 计算总金额差值：等额本金已还金额 - 等额本息已还金额
+            var totalDiff = (bjTotalSum - bxTotalSum) / 10000;
+            totalAmountDiffData.push(totalDiff);
         }
         
         if (this.principalChart) {
@@ -627,15 +646,6 @@ var domOperate = {
         
         // 创建基础数据集（本金曲线默认显示）
         var datasets = [{
-            label: "等额本息已还本金",
-            data: bxPrincipalData,
-            borderColor: "#ff6b6b",
-            backgroundColor: "rgba(255,107,107,0.1)",
-            tension: 0.1,
-            borderWidth: 2,
-            pointRadius: 0,
-            hidden: false
-        }, {
             label: "等额本金已还本金",
             data: bjPrincipalData,
             borderColor: "#4b7bec",
@@ -644,7 +654,29 @@ var domOperate = {
             borderWidth: 2,
             pointRadius: 0,
             hidden: false
+        }, {
+            label: "等额本息已还本金",
+            data: bxPrincipalData,
+            borderColor: "#ff6b6b",
+            backgroundColor: "rgba(255,107,107,0.1)",
+            tension: 0.1,
+            borderWidth: 2,
+            pointRadius: 0,
+            hidden: false
         }];
+        
+        // 添加本金差值曲线
+        datasets.push({
+            label: "已还本金差值(等额本金-等额本息)",
+            data: principalDiffData,
+            borderColor: "#20bf6b",
+            backgroundColor: "rgba(32,191,107,0.1)",
+            borderDash: [8, 4],
+            tension: 0.1,
+            borderWidth: 2,
+            pointRadius: 0,
+            hidden: false  // 默认显示本金差值曲线
+        });
         
         // 添加可选的兴趣曲线数据集（默认隐藏）
         datasets.push({
@@ -721,6 +753,7 @@ var domOperate = {
                             display: true,
                             text: "金额(万)"
                         },
+                        beginAtZero: true,  // Y轴从0开始
                         grid: {
                             color: '#e0e0e0',
                             lineWidth: 1
@@ -732,16 +765,433 @@ var domOperate = {
         
         // 绑定复选框事件
         $('#toggleBenxiInterest').off('change').on('change', function() {
-            if (_this.principalChart && _this.principalChart.data.datasets[2]) {
-                _this.principalChart.data.datasets[2].hidden = !this.checked;
+            if (_this.principalChart && _this.principalChart.data.datasets[3]) {
+                _this.principalChart.data.datasets[3].hidden = !this.checked;
                 _this.principalChart.update();
             }
         });
         
         $('#toggleBenjinInterest').off('change').on('change', function() {
-            if (_this.principalChart && _this.principalChart.data.datasets[3]) {
-                _this.principalChart.data.datasets[3].hidden = !this.checked;
+            if (_this.principalChart && _this.principalChart.data.datasets[4]) {
+                _this.principalChart.data.datasets[4].hidden = !this.checked;
                 _this.principalChart.update();
+            }
+        });
+        
+        // 渲染差值对比图表
+        _this.renderDifferenceChart(benxiData, benjinData, principalDiffData);
+    },
+    // 新增：渲染差值对比图表
+    renderDifferenceChart: function(benxiData, benjinData, principalDiffData) {
+        if (typeof Chart === "undefined") {
+            return;
+        }
+        var canvas = document.getElementById("differenceChart");
+        if (!canvas) {
+            return;
+        }
+        var ctx = canvas.getContext("2d");
+        var bxArr = benxiData.monthdataArray || [];
+        var bjArr = benjinData.monthdataArray || [];
+        var maxLen = Math.max(bxArr.length, bjArr.length);
+        if (maxLen === 0) {
+            return;
+        }
+        
+        var labels = [];
+        var interestDiffData = []; // 差值(本息-本金) 利息差值
+        var principalDiffOnly = [];   // 等额本金已还本金-等额本息已还本金的差值
+        var combinedDiffData = []; // 两条曲线的和
+        var bxInterestSum = 0;
+        var bjInterestSum = 0;
+        var bjPrincipalSum = 0;
+        var bxPrincipalSum = 0;
+        
+        // 如果没有传入principalDiffData，则重新计算本金差值
+        var calculatedPrincipalDiff = [];
+        if (!principalDiffData || principalDiffData.length === 0) {
+            for (var i = 0; i < maxLen; i++) {
+                if (i < bxArr.length) {
+                    bxPrincipalSum += bxArr[i].yuebenjin;
+                }
+                if (i < bjArr.length) {
+                    bjPrincipalSum += bjArr[i].yuebenjin;
+                }
+                var diffValue = (bjPrincipalSum - bxPrincipalSum) / 10000;
+                calculatedPrincipalDiff.push(diffValue);
+            }
+            principalDiffData = calculatedPrincipalDiff;
+        }
+        
+        // 重新计算各差值
+        bxInterestSum = 0;
+        bjInterestSum = 0;
+        bxPrincipalSum = 0;
+        bjPrincipalSum = 0;
+        
+        for (var i = 0; i < maxLen; i++) {
+            labels.push(i + 1);
+            if (i < bxArr.length) {
+                bxPrincipalSum += bxArr[i].yuebenjin;
+                bxInterestSum += bxArr[i].yuelixi;
+            }
+            if (i < bjArr.length) {
+                bjPrincipalSum += bjArr[i].yuebenjin;
+                bjInterestSum += bjArr[i].yuelixi;
+            }
+            
+            // 差值(本息-本金) 利息差值：等额本息利息 - 等额本金利息
+            var interestDiff = (bxInterestSum - bjInterestSum) / 10000;
+            interestDiffData.push(interestDiff);
+            
+            // 等额本金已还本金-等额本息已还本金的差值
+            var principalDiff = i < principalDiffData.length ? principalDiffData[i] : 0;
+            principalDiffOnly.push(principalDiff);
+            
+            // 两条曲线的和
+            combinedDiffData.push(interestDiff + principalDiff);
+        }
+        
+        if (this.differenceChart) {
+            this.differenceChart.destroy();
+        }
+        
+        this.differenceChart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: "差值总和",
+                    data: combinedDiffData,
+                    borderColor: "#20bf6b",
+                    backgroundColor: "rgba(32,191,107,0.1)",
+                    borderDash: [8, 4],
+                    tension: 0.1,
+                    borderWidth: 2,
+                    pointRadius: 0
+                }, {
+                    label: "已还本金差值(等额本金-等额本息)",
+                    data: principalDiffOnly,
+                    borderColor: "#4b7bec",
+                    backgroundColor: "rgba(75,123,236,0.1)",
+                    tension: 0.1,
+                    borderWidth: 2,
+                    pointRadius: 0
+                }, {
+                    label: "已还利息差值(等额本息-等额本金)",
+                    data: interestDiffData,
+                    borderColor: "#ff6b6b",
+                    backgroundColor: "rgba(255,107,107,0.1)",
+                    tension: 0.1,
+                    borderWidth: 2,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 10
+                        }
+                    },
+                    tooltip: {
+                        mode: "index",
+                        intersect: false,
+                        callbacks: {
+                            title: function(context) {
+                                if (context && context.length > 0) {
+                                    var index = context[0].dataIndex;
+                                    return "第 " + (index + 1) + " 期";
+                                }
+                                return "";
+                            },
+                            label: function(context) {
+                                var label = context.dataset.label || "";
+                                var value = context.parsed.y;
+                                return label + ": " + value.toFixed(4) + "万";
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: "期数（月）"
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: "差值(万)"
+                        },
+                        beginAtZero: true,  // Y轴从0开始
+                        grid: {
+                            color: '#e0e0e0',
+                            lineWidth: 1
+                        }
+                    }
+                }
+            }
+        });
+    },
+    // 新增：渲染已还金额对比图表
+    renderTotalAmountChart: function(benxiData, benjinData) {
+        if (typeof Chart === "undefined") {
+            return;
+        }
+        var canvas = document.getElementById("totalAmountChart");
+        if (!canvas) {
+            return;
+        }
+        var ctx = canvas.getContext("2d");
+        var bxArr = benxiData.monthdataArray || [];
+        var bjArr = benjinData.monthdataArray || [];
+        var maxLen = Math.max(bxArr.length, bjArr.length);
+        if (maxLen === 0) {
+            return;
+        }
+        
+        var labels = [];
+        var bxTotalData = []; // 等额本息已还金额
+        var bjTotalData = []; // 等额本金已还金额
+        var diffData = [];    // 差值
+        var bxTotalSum = 0;
+        var bjTotalSum = 0;
+        
+        for (var i = 0; i < maxLen; i++) {
+            labels.push(i + 1);
+            if (i < bxArr.length) {
+                bxTotalSum += bxArr[i].yuebenjin + bxArr[i].yuelixi;
+                bxTotalData.push(bxTotalSum / 10000); // 转换为万元
+            }
+            if (i < bjArr.length) {
+                bjTotalSum += bjArr[i].yuebenjin + bjArr[i].yuelixi;
+                bjTotalData.push(bjTotalSum / 10000); // 转换为万元
+            }
+            // 计算差值：等额本金已还金额 - 等额本息已还金额
+            var diffValue = (bjTotalSum - bxTotalSum) / 10000;
+            diffData.push(diffValue);
+        }
+        
+        if (this.totalAmountChart) {
+            this.totalAmountChart.destroy();
+        }
+        
+        this.totalAmountChart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: "等额本金已还金额",
+                    data: bjTotalData,
+                    borderColor: "#4b7bec",
+                    backgroundColor: "rgba(75,123,236,0.1)",
+                    tension: 0.1,
+                    borderWidth: 2,
+                    pointRadius: 0
+                }, {
+                    label: "等额本息已还金额",
+                    data: bxTotalData,
+                    borderColor: "#ff6b6b",
+                    backgroundColor: "rgba(255,107,107,0.1)",
+                    tension: 0.1,
+                    borderWidth: 2,
+                    pointRadius: 0
+                }, {
+                    label: "已还金额差值(等额本金-等额本息)",
+                    data: diffData,
+                    borderColor: "#20bf6b",
+                    backgroundColor: "rgba(32,191,107,0.1)",
+                    borderDash: [8, 4],
+                    tension: 0.1,
+                    borderWidth: 2,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 10
+                        }
+                    },
+                    tooltip: {
+                        mode: "index",
+                        intersect: false,
+                        callbacks: {
+                            title: function(context) {
+                                if (context && context.length > 0) {
+                                    var index = context[0].dataIndex;
+                                    return "第 " + (index + 1) + " 期";
+                                }
+                                return "";
+                            },
+                            label: function(context) {
+                                var label = context.dataset.label || "";
+                                var value = context.parsed.y;
+                                return label + ": " + value.toFixed(4) + "万";
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: "期数（月）"
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: "金额(万)"
+                        },
+                        beginAtZero: true,  // Y轴从0开始
+                        grid: {
+                            color: '#e0e0e0',
+                            lineWidth: 1
+                        }
+                    }
+                }
+            }
+        });
+    },
+
+    // 新增：渲染已还利息对比图表
+    renderInterestChart: function(benxiData, benjinData) {
+        if (typeof Chart === "undefined") {
+            return;
+        }
+        var canvas = document.getElementById("interestChart");
+        if (!canvas) {
+            return;
+        }
+        var ctx = canvas.getContext("2d");
+        var bxArr = benxiData.monthdataArray || [];
+        var bjArr = benjinData.monthdataArray || [];
+        var maxLen = Math.max(bxArr.length, bjArr.length);
+        if (maxLen === 0) {
+            return;
+        }
+        
+        var labels = [];
+        var bxInterestData = []; // 等额本息已还利息
+        var bjInterestData = []; // 等额本金已还利息
+        var diffData = [];       // 差值
+        var bxInterestSum = 0;
+        var bjInterestSum = 0;
+        
+        for (var i = 0; i < maxLen; i++) {
+            labels.push(i + 1);
+            if (i < bxArr.length) {
+                bxInterestSum += bxArr[i].yuelixi;
+                bxInterestData.push(bxInterestSum / 10000); // 转换为万元
+            }
+            if (i < bjArr.length) {
+                bjInterestSum += bjArr[i].yuelixi;
+                bjInterestData.push(bjInterestSum / 10000); // 转换为万元
+            }
+            // 计算差值：等额本息已还利息 - 等额本金已还利息
+            var diffValue = (bxInterestSum - bjInterestSum) / 10000;
+            diffData.push(diffValue);
+        }
+        
+        if (this.interestChart) {
+            this.interestChart.destroy();
+        }
+        
+        this.interestChart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: "等额本息已还利息",
+                    data: bxInterestData,
+                    borderColor: "#ff6b6b",
+                    backgroundColor: "rgba(255,107,107,0.1)",
+                    tension: 0.1,
+                    borderWidth: 2,
+                    pointRadius: 0
+                }, {
+                    label: "等额本金已还利息",
+                    data: bjInterestData,
+                    borderColor: "#4b7bec",
+                    backgroundColor: "rgba(75,123,236,0.1)",
+                    tension: 0.1,
+                    borderWidth: 2,
+                    pointRadius: 0
+                }, {
+                    label: "已还利息差值(等额本息-等额本金)",
+                    data: diffData,
+                    borderColor: "#20bf6b",
+                    backgroundColor: "rgba(32,191,107,0.1)",
+                    borderDash: [8, 4],
+                    tension: 0.1,
+                    borderWidth: 2,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 10
+                        }
+                    },
+                    tooltip: {
+                        mode: "index",
+                        intersect: false,
+                        callbacks: {
+                            title: function(context) {
+                                if (context && context.length > 0) {
+                                    var index = context[0].dataIndex;
+                                    return "第 " + (index + 1) + " 期";
+                                }
+                                return "";
+                            },
+                            label: function(context) {
+                                var label = context.dataset.label || "";
+                                var value = context.parsed.y;
+                                return label + ": " + value.toFixed(4) + "万";
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: "期数（月）"
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: "金额(万)"
+                        },
+                        beginAtZero: true,  // Y轴从0开始
+                        grid: {
+                            color: '#e0e0e0',
+                            lineWidth: 1
+                        }
+                    }
+                }
             }
         });
     },
