@@ -361,6 +361,13 @@ var domOperate = {
         }
         return (n / 10000).toFixed(4);
     },
+    formatWan2: function (yuan) {
+        var n = parseFloat(yuan);
+        if (isNaN(n)) {
+            return "0.00";
+        }
+        return (n / 10000).toFixed(2);
+    },
     getQueryString: function (name) {
         var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
         var r = window.location.search.substr(1).match(reg);
@@ -449,7 +456,7 @@ var domOperate = {
         var bjSum = 0;
         
         for (var i = 0; i < maxLen; i++) {
-            labels.push((i + 1));
+            labels.push(i + 1);
             if (i < bxArr.length) {
                 bxSum += bxArr[i].yuelixi;
             }
@@ -566,6 +573,177 @@ var domOperate = {
                 }
             }
         });
+
+        // 渲染已还本金图表
+        _this.renderPrincipalChart(benxiData, benjinData);
+    },
+
+    // 新增：渲染已还本金对比图表
+    renderPrincipalChart: function(benxiData, benjinData) {
+        if (typeof Chart === "undefined") {
+            return;
+        }
+        var canvas = document.getElementById("principalChart");
+        if (!canvas) {
+            return;
+        }
+        var ctx = canvas.getContext("2d");
+        var bxArr = benxiData.monthdataArray || [];
+        var bjArr = benjinData.monthdataArray || [];
+        var maxLen = Math.max(bxArr.length, bjArr.length);
+        if (maxLen === 0) {
+            return;
+        }
+        
+        var labels = [];
+        var bxPrincipalData = [];
+        var bjPrincipalData = [];
+        var bxInterestData = [];
+        var bjInterestData = [];
+        var bxPrincipalSum = 0;
+        var bjPrincipalSum = 0;
+        var bxInterestSum = 0;
+        var bjInterestSum = 0;
+        
+        for (var i = 0; i < maxLen; i++) {
+            labels.push(i + 1);
+            if (i < bxArr.length) {
+                bxPrincipalSum += bxArr[i].yuebenjin;
+                bxInterestSum += bxArr[i].yuelixi;
+                bxPrincipalData.push(bxPrincipalSum / 10000); // 转换为万元
+                bxInterestData.push(bxInterestSum / 10000);   // 转换为万元
+            }
+            if (i < bjArr.length) {
+                bjPrincipalSum += bjArr[i].yuebenjin;
+                bjInterestSum += bjArr[i].yuelixi;
+                bjPrincipalData.push(bjPrincipalSum / 10000); // 转换为万元
+                bjInterestData.push(bjInterestSum / 10000);   // 转换为万元
+            }
+        }
+        
+        if (this.principalChart) {
+            this.principalChart.destroy();
+        }
+        
+        // 创建基础数据集（本金曲线默认显示）
+        var datasets = [{
+            label: "等额本息已还本金",
+            data: bxPrincipalData,
+            borderColor: "#ff6b6b",
+            backgroundColor: "rgba(255,107,107,0.1)",
+            tension: 0.1,
+            borderWidth: 2,
+            pointRadius: 0,
+            hidden: false
+        }, {
+            label: "等额本金已还本金",
+            data: bjPrincipalData,
+            borderColor: "#4b7bec",
+            backgroundColor: "rgba(75,123,236,0.1)",
+            tension: 0.1,
+            borderWidth: 2,
+            pointRadius: 0,
+            hidden: false
+        }];
+        
+        // 添加可选的兴趣曲线数据集（默认隐藏）
+        datasets.push({
+            label: "等额本息已还利息",
+            data: bxInterestData,
+            borderColor: "#ff9e6b",
+            backgroundColor: "rgba(255,158,107,0.1)",
+            borderDash: [5, 5],
+            tension: 0.1,
+            borderWidth: 2,
+            pointRadius: 0,
+            hidden: true  // 默认隐藏
+        });
+        
+        datasets.push({
+            label: "等额本金已还利息",
+            data: bjInterestData,
+            borderColor: "#6b9eff",
+            backgroundColor: "rgba(107,158,255,0.1)",
+            borderDash: [5, 5],
+            tension: 0.1,
+            borderWidth: 2,
+            pointRadius: 0,
+            hidden: true  // 默认隐藏
+        });
+        
+        var _this = this;
+        this.principalChart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 10
+                        }
+                    },
+                    tooltip: {
+                        mode: "index",
+                        intersect: false,
+                        callbacks: {
+                            title: function(context) {
+                                if (context && context.length > 0) {
+                                    var index = context[0].dataIndex;
+                                    return "第 " + (index + 1) + " 期";
+                                }
+                                return "";
+                            },
+                            label: function(context) {
+                                var label = context.dataset.label || "";
+                                var value = context.parsed.y;
+                                return label + ": " + value.toFixed(4) + "万";
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: "期数（月）"
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: "金额(万)"
+                        },
+                        grid: {
+                            color: '#e0e0e0',
+                            lineWidth: 1
+                        }
+                    }
+                }
+            }
+        });
+        
+        // 绑定复选框事件
+        $('#toggleBenxiInterest').off('change').on('change', function() {
+            if (_this.principalChart && _this.principalChart.data.datasets[2]) {
+                _this.principalChart.data.datasets[2].hidden = !this.checked;
+                _this.principalChart.update();
+            }
+        });
+        
+        $('#toggleBenjinInterest').off('change').on('change', function() {
+            if (_this.principalChart && _this.principalChart.data.datasets[3]) {
+                _this.principalChart.data.datasets[3].hidden = !this.checked;
+                _this.principalChart.update();
+            }
+        });
     },
     domOperates: function (type, data) {
         var _this = this;
@@ -600,19 +778,28 @@ var domOperate = {
             $("#totalyear").html(data.year);
             // 详情页面循环：按期次平铺
             var rowsHtml = [];
+            var cumulativePrincipal = 0;
+            var cumulativeInterest = 0;
+            
             monthdataArray.forEach(function (item, index) {
+                cumulativePrincipal += item.yuebenjin;
+                cumulativeInterest += item.yuelixi;
+                var totalPaid = cumulativePrincipal + cumulativeInterest;
+                
                 rowsHtml.push(
                     '<div class="mouthli displayflex border_bottom">' +
                     '<div class="mouthtd flexli"><span>' + (index + 1) + '</span></div>' +
-                    '<div class="mouthtd flexli"><span>' + _this.formatCurrency(item.yuebenjin) + '</span></div>' +
-                    '<div class="mouthtd flexli"><span>' + _this.formatCurrency(item.yuelixi) + '</span></div>' +
-                    '<div class="mouthtd flexli"><span>' + _this.formatWan4(item.leftBenjin) + '</span></div>' +
-                    '<div class="mouthtd flexli"><span>' + _this.formatWan4(item.leftFund) + '</span></div>' +
+                    '<div class="mouthtd flexli"><span>' + _this.formatWan2(item.yuebenjin) + '</span></div>' +
+                    '<div class="mouthtd flexli"><span>' + _this.formatWan2(item.yuelixi) + '</span></div>' +
+                    '<div class="mouthtd flexli"><span>' + _this.formatWan2(item.leftBenjin) + '</span></div>' +
+                    '<div class="mouthtd flexli"><span>' + _this.formatWan2(item.leftFund) + '</span></div>' +
+                    '<div class="mouthtd flexli"><span>' + _this.formatWan2(cumulativePrincipal) + '</span></div>' +
+                    '<div class="mouthtd flexli"><span>' + _this.formatWan2(cumulativeInterest) + '</span></div>' +
+                    '<div class="mouthtd flexli"><span>' + _this.formatWan2(totalPaid) + '</span></div>' +
                     '</div>'
                 );
             });
             $("#yearouter").html('<div class="mouths">' + rowsHtml.join("") + '</div>');
-
         }
 
     },
@@ -716,14 +903,25 @@ var domOperate = {
         if (!list || list.length === 0) {
             return;
         }
-        var csv = '期次,每月本金(元),每月利息(元),剩余本金(元),剩余还款(元)\n';
+        // 包含所有列的表头，所有单位为元并保留两位小数
+        var csv = '期次,每月本金(元),每月利息(元),剩余本金(元),剩余还款(元),已还本金(元),已还利息(元),已还金额(元)\n';
+        var cumulativePrincipal = 0;
+        var cumulativeInterest = 0;
+        
         list.forEach(function (item, index) {
+            cumulativePrincipal += item.yuebenjin;
+            cumulativeInterest += item.yuelixi;
+            var totalPaid = cumulativePrincipal + cumulativeInterest;
+            
             var row = [
                 index + 1,
-                String(item.yuebenjin),
-                String(item.yuelixi),
-                String(item.leftBenjin),
-                String(item.leftFund)
+                item.yuebenjin.toFixed(2),              // 每月本金 - 元，2位小数
+                item.yuelixi.toFixed(2),                // 每月利息 - 元，2位小数
+                item.leftBenjin.toFixed(2),             // 剩余本金 - 元，2位小数
+                item.leftFund.toFixed(2),               // 剩余还款 - 元，2位小数
+                cumulativePrincipal.toFixed(2),         // 已还本金 - 元，2位小数
+                cumulativeInterest.toFixed(2),          // 已还利息 - 元，2位小数
+                totalPaid.toFixed(2)                    // 已还金额 - 元，2位小数
             ];
             csv += row.join(',') + '\n';
         });
