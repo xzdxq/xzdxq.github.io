@@ -801,7 +801,7 @@ var domOperate = {
         var labels = [];
         var amountMinusPrincipalDiff = []; // 已还金额差值-已还本金差值的绝对值
         var interestDiffData = [];         // 已还利息差值的绝对值
-        var combinedDiffData = [];         // 两条曲线和的绝对值
+        // var combinedDiffData = [];         // 两条曲线和的绝对值
         var bxPrincipalSum = 0;
         var bjPrincipalSum = 0;
         var bxInterestSum = 0;
@@ -861,7 +861,7 @@ var domOperate = {
             interestDiffData.push(interestDiff);
             
             // 第三条曲线：两条曲线的和，取绝对值
-            combinedDiffData.push(Math.abs(amountMinusPrincipal + interestDiff));
+            // combinedDiffData.push(Math.abs(amountMinusPrincipal + interestDiff));
         }
         
         if (this.differenceChart) {
@@ -873,22 +873,22 @@ var domOperate = {
             data: {
                 labels: labels,
                 datasets: [{
-                    label: "a=|已还金额差值-已还本金差值|",
+                    label: "|已还金额差值-已还本金差值|",
                     data: amountMinusPrincipalDiff,
                     borderColor: "#ff6b6b",
                     backgroundColor: "rgba(255,107,107,0.1)",
                     tension: 0.1,
                     borderWidth: 2,
                     pointRadius: 0
-                }, {
-                    label: "b=|已还利息差值|",
+                }/* , {
+                    label: "|已还利息差值|",
                     data: interestDiffData,
                     borderColor: "#4b7bec",
                     backgroundColor: "rgba(75,123,236,0.1)",
                     tension: 0.1,
                     borderWidth: 2,
                     pointRadius: 0
-                }, {
+                } *//* , {
                     label: "|差值总和(a+b)|",
                     data: combinedDiffData,
                     borderColor: "#20bf6b",
@@ -897,7 +897,7 @@ var domOperate = {
                     tension: 0.1,
                     borderWidth: 2,
                     pointRadius: 0
-                }]
+                } */]
             },
             options: {
                 responsive: true,
@@ -1387,19 +1387,26 @@ var domOperate = {
             ];
             csv += row.join(',') + '\n';
         });
+        
+        // 根据还款方式确定文件名前缀
+        var fileNamePrefix = '';
+        if (result.type === '1') {
+            fileNamePrefix = '等额本息_';
+        } else if (result.type === '2') {
+            fileNamePrefix = '等额本金_';
+        }
+        
         var blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
         var url = URL.createObjectURL(blob);
         var a = document.createElement('a');
         a.href = url;
-        a.download = '还款明细.csv';
+        a.download = fileNamePrefix + '还款明细.csv';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     },
     inputChange: function () { }
-
-
 
 }
 domOperate.init();
